@@ -18,17 +18,17 @@ contract SendPackedUserOp is Script {
     function generateSignedUserOperation(
         bytes memory callData,
         address entryPoint,
-        address account
+        address minimalAccount
     )
         public
         view
         returns (PackedUserOperation memory)
     {
-        uint256 nonce = vm.getNonce(account);
+        uint256 nonce = vm.getNonce(minimalAccount)-1;
         // uint256 nonce = IEntryPoint(entryPoint).getNonce(minimalAccount, 0);
-        PackedUserOperation memory signedUserOp = generateUnSignedUserOperation(callData, account, nonce);
+        PackedUserOperation memory userOp = generateUnSignedUserOperation(callData, minimalAccount, nonce);
 
-        bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(signedUserOp);
+        bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
         bytes32 digest = userOpHash.toEthSignedMessageHash();
         uint8 v;
         bytes32 r;
@@ -37,10 +37,10 @@ contract SendPackedUserOp is Script {
             console.log("anvil key signer", ANVIL_DEFAULT_KEY);
             (v, r, s) = vm.sign(ANVIL_DEFAULT_KEY, digest);
         } else {
-            (v, r, s) = vm.sign(account, digest);
+            (v, r, s) = vm.sign(minimalAccount, digest);
         }
-        signedUserOp.signature = abi.encodePacked(r, s, v);
-        return signedUserOp;
+        userOp.signature = abi.encodePacked(r, s, v);
+        return userOp;
     }
 
     function generateUnSignedUserOperation(
